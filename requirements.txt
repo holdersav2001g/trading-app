@@ -1,0 +1,34 @@
+# Core Application
+pydantic
+pydantic-settings
+structlog
+sqlalchemy
+alembic
+uvloop
+aiofiles
+aiohttp
+numpy
+pandas
+msgpack
+orjson
+psutil
+prometheus-client
+loguru
+websockets
+matplotlib
+plotly
+requests
+
+# Development & Testing
+pytest
+pytest-asyncio
+pytest-benchmark
+coverage
+hypothesis
+black
+mypy
+flake8
+
+# Documentation
+sphinx
+mkdocs
