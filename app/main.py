@@ -2,16 +2,16 @@ import asyncio
 import signal
 import structlog
 
-from app.config import settings
-from app.database.database import SessionLocal, Base, engine
-from app.logging_config import setup_logging
-from app.components.data_generator import SimulatedMarketGenerator
-from app.components.ingestion import DataIngestionBuffer, MessageParser
-from app.components.monitoring import PerformanceMonitor, AlertSystem
-from app.components.scheduling import PriorityScheduler
-from app.components.workers.risk_simulator import RiskSimulator
-from app.components.workers.strategy_simulator import StrategySimulator
-from app.components.workers.analytics_engine import AnalyticsEngine
+from .config import settings
+from .database.database import SessionLocal, Base, engine
+from .logging_config import setup_logging
+from .components.data_generator import SimulatedMarketGenerator
+from .components.ingestion import DataIngestionBuffer, MessageParser
+from .components.monitoring import PerformanceMonitor, AlertSystem
+from .components.scheduling import PriorityScheduler
+from .components.workers.risk_simulator import RiskSimulator
+from .components.workers.strategy_simulator import StrategySimulator
+from .components.workers.analytics_engine import AnalyticsEngine
 
 log = structlog.get_logger()
 
@@ -52,31 +52,25 @@ async def main():
         asyncio.create_task(monitor.run_reporter())
     ]
 
-    # Handle graceful shutdown
-    shutdown_event = asyncio.Event()
-
-    def signal_handler():
-        log.info("shutdown.signal_received")
-        shutdown_event.set()
-
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, signal_handler)
-
-    await shutdown_event.wait()
-
-    # Stop all tasks
-    log.info("application.shutdown")
-    market_generator.stop()
-    parser.stop()
-    scheduler.stop()
-    
-    # Wait for tasks to finish
-    await asyncio.gather(*tasks, return_exceptions=True)
-    db_session.close()
-    log.info("application.shutdown.complete")
+    log.info("application.running")
+    try:
+        await asyncio.gather(*tasks)
+    except asyncio.CancelledError:
+        log.info("application.shutdown_signal_received")
+    finally:
+        # Stop all tasks
+        log.info("application.shutdown")
+        market_generator.stop()
+        parser.stop()
+        scheduler.stop()
+        
+        # Wait for tasks to finish
+        await asyncio.gather(*tasks, return_exceptions=True)
+        db_session.close()
+        log.info("application.shutdown.complete")
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        log.info("application.forced_shutdown")
+        log.info("application.shutdown_initiated")
